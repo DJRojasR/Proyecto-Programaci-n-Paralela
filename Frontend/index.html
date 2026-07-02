@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ciudad Inteligente · Sensores IoT</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- Topbar: título + métricas clave + estado de conexión -->
+    <header class="topbar">
+      <div class="topbar__title">
+        Ciudad Inteligente <small>Monitor de Sensores IoT</small>
+      </div>
+
+      <div class="topbar__metrics" id="topbar-metrics">
+        <div class="metric-inline">
+          <span class="metric-inline__label">Sensores</span>
+          <span class="metric-inline__value" data-metric="total">0</span>
+        </div>
+        <div class="metric-inline">
+          <span class="metric-inline__label">Activos</span>
+          <span class="metric-inline__value" data-metric="activos">0</span>
+        </div>
+        <div class="metric-inline">
+          <span class="metric-inline__label">Msgs/seg</span>
+          <span class="metric-inline__value" data-metric="msgs-seg">0</span>
+        </div>
+        <div class="metric-inline">
+          <span class="metric-inline__label">Latencia</span>
+          <span class="metric-inline__value" data-metric="latencia">0 ms</span>
+        </div>
+      </div>
+
+      <button class="connection-pill" id="connection-pill" data-state="idle">
+        <span class="connection-pill__dot"></span>
+        <span>Sin conexión</span>
+      </button>
+    </header>
+
+    <!-- Mapa: nube de puntos WebGL -->
+    <main class="map-wrap">
+      <canvas id="sensor-canvas"></canvas>
+      <div class="map-empty-state">
+        <div class="map-empty-state__label">Esperando conexión MQTT</div>
+      </div>
+      <div class="map-coords">x: 0 · y: 0</div>
+    </main>
+
+    <!-- Sidebar: métricas detalladas + leyenda + control de conexión -->
+    <aside class="sidebar">
+      <div class="panel-block">
+        <div class="panel-block__title">Métricas</div>
+        <div class="metric-grid" id="sidebar-metrics">
+          <div class="metric-card">
+            <div class="metric-card__label">Total</div>
+            <div class="metric-card__value" data-metric="card-total">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card__label">Activos</div>
+            <div class="metric-card__value" data-metric="card-activos">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card__label">Inactivos</div>
+            <div class="metric-card__value" data-metric="card-inactivos">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card__label">Msgs/seg</div>
+            <div class="metric-card__value" data-metric="card-msgs-seg">0</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card__label">Latencia</div>
+            <div class="metric-card__value" data-metric="card-latencia">0<span class="metric-card__unit">ms</span></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-card__label">Pérdida</div>
+            <div class="metric-card__value" data-metric="card-perdida">0<span class="metric-card__unit">%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-block">
+        <div class="panel-block__title">Leyenda</div>
+        <div id="legend-container"></div>
+      </div>
+
+      <div class="panel-block">
+        <div class="panel-block__title">Conexión MQTT (real)</div>
+        <div id="control-container"></div>
+      </div>
+
+      <div class="panel-block">
+        <div class="panel-block__title">Datos ficticios (sin MPI)</div>
+        <div id="simulacion-container"></div>
+      </div>
+    </aside>
+
+    <footer class="status-bar">
+      <div class="status-bar__item"><b>CPU</b><span>—</span></div>
+      <div class="status-bar__item"><b>Memoria</b><span>—</span></div>
+      <div class="status-bar__item"><b>Conexiones MQTT activas</b><span>0</span></div>
+    </footer>
+
+  </div>
+
+  <!-- Librería MQTT sobre WebSockets -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
