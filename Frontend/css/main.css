@@ -315,3 +315,105 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- Modal de experimentos (speedup/eficiencia) ---------- */
+
+.modal-experimentos__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 5, 8, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-experimentos__caja {
+  background: var(--bg-panel);
+  border: 1px solid var(--line-hairline);
+  border-radius: var(--radius-md);
+  width: min(900px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+.modal-experimentos__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line-hairline);
+}
+
+.modal-experimentos__cerrar {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-experimentos__cerrar:hover { color: var(--text-primary); }
+
+.tabla-experimentos {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin-bottom: var(--space-5);
+}
+
+.tabla-experimentos th, .tabla-experimentos td {
+  padding: var(--space-2) var(--space-3);
+  text-align: right;
+  border-bottom: 1px solid var(--line-hairline);
+}
+
+.tabla-experimentos th {
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  font-size: 9px;
+}
+
+.tabla-experimentos td { font-variant-numeric: tabular-nums; }
+
+.graficos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.grafico-experimento__titulo {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: var(--space-2);
+}
+
+.grafico-experimento__leyenda {
+  display: flex;
+  gap: var(--space-4);
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: var(--space-1);
+}
+
+.grafico-experimento__leyenda i {
+  display: inline-block;
+  width: 10px;
+  height: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+@media (max-width: 720px) {
+  .graficos-grid { grid-template-columns: 1fr; }
+}

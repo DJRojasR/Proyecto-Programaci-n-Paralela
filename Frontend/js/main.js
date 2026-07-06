@@ -4,9 +4,8 @@ import { WebGLRenderer } from './render/WebGLRenderer.js';
 import { SensorStateManager } from './state/SensorStateManager.js';
 import { MetricsPanel } from './ui/MetricsPanel.js';
 import { Legend } from './ui/Legend.js';
-import { ControlPanel, SimulacionPanel } from './ui/ControlPanel.js';
-import { SimuladorSensores } from './mock/SimuladorSensores.js';
-import { METRICAS_CONFIG, SIMULACION_CONFIG } from './config.js';
+import { ControlPanel } from './ui/ControlPanel.js';
+import { METRICAS_CONFIG } from './config.js';
 
 // --- Modelos y estado -------------------------------------------------
 const ciudad = new Ciudad();
@@ -28,12 +27,6 @@ legend.render();
 
 const controlPanel = new ControlPanel(document.getElementById('control-container'));
 controlPanel.render();
-
-const simulacionPanel = new SimulacionPanel(
-  document.getElementById('simulacion-container'),
-  SIMULACION_CONFIG.cantidadSensoresDefault
-);
-simulacionPanel.render();
 
 // --- Renderer WebGL ------------------------------------------------
 const renderer = new WebGLRenderer(canvas);
@@ -77,31 +70,4 @@ controlPanel.onConectar(({ brokerUrl, topic }) => {
 
   controlPanel.marcarEstadoBoton('Conectando...', true);
   mqttClient.conectar();
-});
-
-// --- Simulación de datos ficticios (sin MPI, sin broker) ------------
-let simuladorActivo = null;
-
-simulacionPanel.onIniciar(({ cantidad }) => {
-  if (simuladorActivo) simuladorActivo.detener();
-
-  simuladorActivo = new SimuladorSensores({ cantidadSensores: cantidad });
-  simuladorActivo.onMensaje((payload) => {
-    ciudad.aplicarMedicion(payload);
-    stateManager.registrarMensaje(payload);
-  });
-  simuladorActivo.iniciar();
-
-  emptyState.style.display = 'none';
-  connectionPill.dataset.state = 'connected';
-  connectionPill.querySelector('span').textContent = 'Simulación activa';
-});
-
-simulacionPanel.onDetener(() => {
-  if (simuladorActivo) {
-    simuladorActivo.detener();
-    simuladorActivo = null;
-  }
-  connectionPill.dataset.state = 'idle';
-  connectionPill.querySelector('span').textContent = 'Sin conexión';
 });

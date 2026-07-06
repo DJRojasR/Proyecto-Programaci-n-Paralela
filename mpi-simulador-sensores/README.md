@@ -120,6 +120,7 @@ sudo apt install libopenmpi-dev openmpi-bin libmosquitto-dev mosquitto mosquitto
 mosquitto -c scripts/mosquitto.conf -d
 
 # 3. Compilar y correr (1000 sensores, 2 procesos, 4 hilos c/u, cada 5s)
+# Importante abrilo en otra terminal 
 ./scripts/ejecutar.sh 1000 2 4 5
 
 # 4. (opcional) ver los mensajes crudos en otra terminal
