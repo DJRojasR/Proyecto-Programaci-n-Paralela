@@ -113,6 +113,9 @@ probar):
 ## Cómo correrlo
 
 ```bash
+# Permisos necesarios ponerlo en la terminal
+chmod + ./scripts/ejecutar.sh
+
 # 1. Instalar dependencias (Ubuntu/Debian)
 sudo apt install libopenmpi-dev openmpi-bin libmosquitto-dev mosquitto mosquitto-clients
 
