@@ -6,9 +6,11 @@ import { METRICAS_CONFIG } from '../config.js';
  * reciente de eventos para poder calcular las métricas que pide el
  * documento: throughput, latencia promedio y % de pérdida.
  *
- * "Pérdida" aquí se calcula si el payload trae un número de secuencia
- * esperado vs. recibido; si no viene, ese cálculo queda en 0 y listo
- * para conectarse cuando el simulador lo incluya.
+ * "Pérdida" se calcula con el número de secuencia (`seq`) que cada
+ * sensor incluye en su mensaje: si el seq recibido salta (ej. de 5
+ * a 8), se asume que los mensajes 6 y 7 se perdieron en el camino.
+ * Es una medida real basada en lo que efectivamente llega por MQTT,
+ * no una estimación teórica.
  */
 export class SensorStateManager {
   constructor(ciudad) {
@@ -16,8 +18,10 @@ export class SensorStateManager {
 
     this._timestampsRecientes = []; // para mensajes/seg
     this._latenciasRecientes = [];  // ms, para latencia promedio
-    this._mensajesEsperados = 0;
-    this._mensajesRecibidos = 0;
+
+    this._ultimoSeqPorSensor = new Map(); // sensor_id -> último seq visto
+    this._mensajesRecibidosTotal = 0;
+    this._mensajesPerdidosTotal = 0;
   }
 
   /**
@@ -27,13 +31,23 @@ export class SensorStateManager {
   registrarMensaje(payload) {
     const ahora = Date.now();
     this._timestampsRecientes.push(ahora);
-    this._mensajesRecibidos += 1;
+    this._mensajesRecibidosTotal += 1;
 
     if (payload.timestamp) {
       // timestamp del doc viene en segundos epoch (ver ejemplo del proyecto)
       const emitidoMs = payload.timestamp > 1e12 ? payload.timestamp : payload.timestamp * 1000;
       const latencia = ahora - emitidoMs;
       if (latencia >= 0) this._latenciasRecientes.push(latencia);
+    }
+
+    if (typeof payload.seq === 'number' && payload.sensor_id) {
+      const anterior = this._ultimoSeqPorSensor.get(payload.sensor_id);
+      if (anterior !== undefined && payload.seq > anterior + 1) {
+        this._mensajesPerdidosTotal += payload.seq - anterior - 1;
+      }
+      if (anterior === undefined || payload.seq > anterior) {
+        this._ultimoSeqPorSensor.set(payload.sensor_id, payload.seq);
+      }
     }
 
     this._purgarVentana(ahora);
@@ -61,8 +75,9 @@ export class SensorStateManager {
       ? this._latenciasRecientes.reduce((a, b) => a + b, 0) / this._latenciasRecientes.length
       : 0;
 
-    const perdida = this._mensajesEsperados > 0
-      ? Math.max(0, 1 - this._mensajesRecibidos / this._mensajesEsperados) * 100
+    const esperadosTotal = this._mensajesRecibidosTotal + this._mensajesPerdidosTotal;
+    const perdida = esperadosTotal > 0
+      ? (this._mensajesPerdidosTotal / esperadosTotal) * 100
       : 0;
 
     return {
@@ -72,6 +87,7 @@ export class SensorStateManager {
       mensajesPorSeg,
       latenciaPromedioMs: Math.round(latenciaProm),
       perdidaPct: Number(perdida.toFixed(2)),
+      mensajesPerdidosTotal: this._mensajesPerdidosTotal,
     };
   }
 }

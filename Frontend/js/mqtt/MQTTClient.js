@@ -3,18 +3,24 @@ import { MQTT_CONFIG } from '../config.js';
 /**
  * MQTTClient
  * Envoltorio delgado sobre la librería mqtt.js (cargada por CDN como
- * variable global `mqtt` en index.html). Su única responsabilidad es
- * conectarse, suscribirse al tópico de la ciudad y reenviar cada
- * mensaje ya parseado. No decide qué hacer con los datos: eso lo
- * hace quien lo escuche (ver main.js).
+ * variable global `mqtt` en index.html). Se suscribe a DOS tópicos:
+ * el de mediciones de sensores y el de control (CPU/memoria de cada
+ * proceso MPI). Cada mensaje se reenvía junto con su tópico de
+ * origen, para que quien lo escuche (main.js) sepa a cuál de los dos
+ * corresponde sin tener que adivinar por la forma del payload.
  *
  * No se autoconecta al importarse: la conexión la dispara el usuario
  * desde el panel de control, o main.js si se decide automatizarlo.
  */
 export class MQTTClient {
-  constructor({ brokerUrl = MQTT_CONFIG.brokerUrl, topic = MQTT_CONFIG.topic } = {}) {
+  constructor({
+    brokerUrl = MQTT_CONFIG.brokerUrl,
+    topic = MQTT_CONFIG.topic,
+    topicControl = MQTT_CONFIG.topicControl,
+  } = {}) {
     this.brokerUrl = brokerUrl;
     this.topic = topic;
+    this.topicControl = topicControl;
     this.client = null;
 
     this._listeners = {
@@ -47,13 +53,14 @@ export class MQTTClient {
     this.client = mqtt.connect(this.brokerUrl, { clientId });
 
     this.client.on('connect', () => {
-      this.client.subscribe(this.topic, (err) => {
+      const topicos = [this.topic, this.topicControl];
+      this.client.subscribe(topicos, (err) => {
         if (err) this._emit('error', err);
       });
-      this._emit('connect', { brokerUrl: this.brokerUrl, topic: this.topic });
+      this._emit('connect', { brokerUrl: this.brokerUrl, topicos });
     });
 
-    this.client.on('message', (_topic, mensaje) => {
+    this.client.on('message', (topicRecibido, mensaje) => {
       let payload;
       try {
         payload = JSON.parse(mensaje.toString());
@@ -61,7 +68,7 @@ export class MQTTClient {
         this._emit('error', new Error('Mensaje MQTT no es JSON válido'));
         return;
       }
-      this._emit('message', payload);
+      this._emit('message', { topic: topicRecibido, payload });
     });
 
     this.client.on('error', (err) => this._emit('error', err));

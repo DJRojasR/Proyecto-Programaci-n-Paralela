@@ -19,6 +19,8 @@
 #define CIUDAD_ANCHO 1000
 #define CIUDAD_ALTO  1000
 
+#define HEARTBEAT_INTERVAL_SEG 2
+
 #define TEMP_MIN 15.0
 #define TEMP_MAX 34.0
 #define HUM_MIN  30.0

@@ -78,6 +78,10 @@
             <div class="metric-card__label">Pérdida</div>
             <div class="metric-card__value" data-metric="card-perdida">0<span class="metric-card__unit">%</span></div>
           </div>
+          <div class="metric-card">
+            <div class="metric-card__label">Speedup máx</div>
+            <div class="metric-card__value" data-metric="card-speedup">—</div>
+          </div>
         </div>
       </div>
 
@@ -87,17 +91,28 @@
       </div>
 
       <div class="panel-block">
+        <div class="panel-block__title">Sensores por zona</div>
+        <div id="zonas-container"></div>
+      </div>
+
+      <div class="panel-block">
         <div class="panel-block__title">Conexión MQTT (real)</div>
         <div id="control-container"></div>
+      </div>
+
+      <div class="panel-block">
+        <div class="panel-block__title">Experimentos (speedup)</div>
+        <div id="experimentos-container"></div>
       </div>
     </aside>
 
     <div id="modal-experimentos"></div>
 
     <footer class="status-bar">
-      <div class="status-bar__item"><b>CPU</b><span>—</span></div>
-      <div class="status-bar__item"><b>Memoria</b><span>—</span></div>
-      <div class="status-bar__item"><b>Conexiones MQTT activas</b><span>0</span></div>
+      <div class="status-bar__item"><b>CPU simulador</b><span data-status="cpu">—</span></div>
+      <div class="status-bar__item"><b>Memoria simulador</b><span data-status="memoria">—</span></div>
+      <div class="status-bar__item"><b>Procesos MPI activos</b><span data-status="procesos">0</span></div>
+      <div class="status-bar__item"><b>Memoria navegador</b><span data-status="memoria-navegador">—</span></div>
     </footer>
 
   </div>

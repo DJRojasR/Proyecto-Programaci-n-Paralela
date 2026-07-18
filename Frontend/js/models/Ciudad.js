@@ -27,8 +27,8 @@ export class Ciudad {
   }
 
   aplicarMedicion(payload) {
-    const { sensor_id, x, y, temperature, humidity, timestamp } = payload;
-    const sensor = this.obtenerOCrear(sensor_id, { x, y });
+    const { sensor_id, x, y, zona, temperature, humidity, timestamp } = payload;
+    const sensor = this.obtenerOCrear(sensor_id, { x, y, zona });
     sensor.actualizar({ temperatura: temperature, humedad: humidity, timestamp });
     return sensor;
   }
@@ -49,5 +49,15 @@ export class Ciudad {
 
   porZona(zona) {
     return this.listar().filter((s) => s.zona === zona);
+  }
+
+  /** Cuenta sensores agrupados por zona, para mostrar en el panel lateral. */
+  contarPorZona() {
+    const conteo = {};
+    for (const s of this.sensores.values()) {
+      const clave = s.zona ?? 'Sin zona';
+      conteo[clave] = (conteo[clave] ?? 0) + 1;
+    }
+    return conteo;
   }
 }

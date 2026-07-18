@@ -12,6 +12,7 @@
 #include "zona.h"
 #include "mqtt_publisher.h"
 #include "control.h"
+#include "monitor.h"
 
 typedef struct {
     int id_hilo;
@@ -19,6 +20,7 @@ typedef struct {
     Sensor *sensores;
     int n_sensores;
     int frecuencia_seg;
+    long mensajes_publicados; /* la va incrementando el propio hilo, sin locks */
 } HiloArgs;
 
 static void *hilo_trabajador(void *arg_ptr) {
@@ -31,7 +33,7 @@ static void *hilo_trabajador(void *arg_ptr) {
     struct mosquitto *mosq = mqtt_publisher_crear(client_id);
     if (!mosq || mqtt_publisher_conectar(mosq, BROKER_HOST, BROKER_PORT) != MOSQ_ERR_SUCCESS) {
         fprintf(stderr, "[rank %d hilo %d] no se pudo conectar al broker (%s:%d). "
-                        "¿Está corriendo Mosquitto? Este hilo no publicará.\n",
+                        "Esta corriendo Mosquitto? Este hilo no publicara.\n",
                 args->rank, args->id_hilo, BROKER_HOST, BROKER_PORT);
         return NULL;
     }
@@ -42,7 +44,8 @@ static void *hilo_trabajador(void *arg_ptr) {
             sensor_actualizar_lectura(&args->sensores[i], &seed);
             sensor_a_json(&args->sensores[i], payload, sizeof(payload));
             mqtt_publisher_publicar(mosq, TOPIC_SENSORES, payload);
-            usleep(PAUSA_ENTRE_MSG_US); /* evita ráfagas que saturen CPU/broker */
+            args->mensajes_publicados++;
+            usleep(PAUSA_ENTRE_MSG_US);
         }
         for (int s = 0; s < args->frecuencia_seg && !g_detener; s++) sleep(1);
     }
@@ -61,8 +64,6 @@ static void parsear_argumentos(int argc, char **argv, int *sensores, int *hilos,
 
 int main(int argc, char **argv) {
     int provided;
-    /* FUNNELED alcanza: MPI solo se llama desde el hilo principal
-     * (los hilos trabajadores solo hablan MQTT, no MPI). */
     MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
 
     int rank, size;
@@ -81,19 +82,22 @@ int main(int argc, char **argv) {
     zona_calcular_rango(rank, size, total_sensores, &inicio, &fin);
     int mis_sensores = fin - inicio;
 
+    RegionGeografica region;
+    zona_region_para_rank(rank, size, &region);
+
     if (rank == 0) {
         printf("=== Simulador Ciudad Inteligente (MPI + Pthreads) ===\n");
         printf("Procesos MPI: %d | Hilos/proceso: %d | Sensores totales: %d | Frecuencia: %ds\n",
                size, hilos_por_proceso, total_sensores, frecuencia);
     }
-    printf("[rank %d] atiende sensores %d..%d (%d sensores)\n", rank, inicio, fin - 1, mis_sensores);
+    printf("[rank %d] zona '%s' -> x:[%d,%d) y:[%d,%d) | %d sensores\n",
+           rank, region.etiqueta, region.x_min, region.x_max,
+           region.y_min, region.y_max, mis_sensores);
 
     Sensor *sensores_locales = malloc(sizeof(Sensor) * mis_sensores);
     unsigned int seed_init = (unsigned int)(time(NULL) ^ (rank * 7919));
-    sensor_inicializar_lote(sensores_locales, mis_sensores, inicio, &seed_init);
+    sensor_inicializar_lote(sensores_locales, mis_sensores, inicio, &region, &seed_init);
 
-    /* Reparto de los sensores locales entre los hilos de este proceso,
-     * reutilizando la misma lógica de reparto que usa MPI entre procesos. */
     pthread_t *hilos = malloc(sizeof(pthread_t) * hilos_por_proceso);
     HiloArgs *args = malloc(sizeof(HiloArgs) * hilos_por_proceso);
 
@@ -105,26 +109,28 @@ int main(int argc, char **argv) {
         args[h].sensores = &sensores_locales[hi];
         args[h].n_sensores = hf - hi;
         args[h].frecuencia_seg = frecuencia;
+        args[h].mensajes_publicados = 0;
         pthread_create(&hilos[h], NULL, hilo_trabajador, &args[h]);
     }
 
-    /* "Botón de detener": en el rank 0, un hilo separado espera 'stop'
-     * por stdin (o Ctrl+C via SIGINT). Se desacopla (detach) porque
-     * puede quedar bloqueado en fgets() y no queremos esperarlo al salir. */
+    long **punteros_contadores = malloc(sizeof(long *) * hilos_por_proceso);
+    for (int h = 0; h < hilos_por_proceso; h++) {
+        punteros_contadores[h] = &args[h].mensajes_publicados;
+    }
+    MonitorArgs margs = {
+        .rank = rank,
+        .hilos_por_proceso = hilos_por_proceso,
+        .punteros_contadores = punteros_contadores,
+    };
+    pthread_t hilo_monitor;
+    pthread_create(&hilo_monitor, NULL, monitor_hilo_recursos, &margs);
+
     if (rank == 0) {
         pthread_t hilo_control;
         pthread_create(&hilo_control, NULL, control_hilo_escucha_stdin, NULL);
         pthread_detach(hilo_control);
     }
 
-    /* Coordinación de parada entre procesos MPI SIN busy-waiting:
-     * - rank 0 espera localmente (solo su propio hilo, sin tocar MPI)
-     *   a que el hilo de control marque g_detener=1, y entonces avisa
-     *   a los demás ranks con un mensaje punto a punto.
-     * - los demás ranks solo "espían" con MPI_Iprobe (no bloqueante)
-     *   una vez por segundo; el resto del tiempo duermen. Así ningún
-     *   proceso queda pegado consumiendo un núcleo entero solo por
-     *   estar esperando la señal de parada. */
     if (rank == 0) {
         while (!g_detener) usleep(100000);
         int senal = 1;
@@ -146,13 +152,15 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (rank == 0) printf("\n[control] deteniendo simulación de forma ordenada...\n");
+    if (rank == 0) printf("\n[control] deteniendo simulaci\xc3\xb3n de forma ordenada...\n");
 
     for (int h = 0; h < hilos_por_proceso; h++) pthread_join(hilos[h], NULL);
+    pthread_join(hilo_monitor, NULL);
 
     free(sensores_locales);
     free(hilos);
     free(args);
+    free(punteros_contadores);
 
     mosquitto_lib_cleanup();
     if (rank == 0) printf("[control] listo, todos los procesos terminaron.\n");
