@@ -44,4 +44,19 @@ export class MetricsPanel {
     if (tono) el.dataset.tone = tono;
     else delete el.dataset.tone;
   }
+
+  /**
+   * Pinta el mejor resultado (mayor número de trabajadores) del último
+   * CSV de experimentos cargado, como dos tarjetas más junto al resto
+   * de métricas — no es una métrica en vivo, es del último análisis.
+   */
+  actualizarExperimento({ speedup, eficiencia }) {
+    this._setValor(this.sidebarEl, 'card-speedup', `${speedup.toFixed(2)}x`);
+    this._setValor(
+      this.sidebarEl,
+      'card-eficiencia',
+      eficiencia.toFixed(2),
+      eficiencia < 0.5 ? 'warn' : null
+    );
+  }
 }
