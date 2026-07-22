@@ -1,0 +1,4 @@
+=== Simulador Ciudad Inteligente (MPI + Pthreads) ===
+Procesos MPI: 1 | Hilos/proceso: 1 | Sensores totales: 10000 | MODO TRABAJO FIJO: 20 repeticiones/sensor
+[rank 0] zona 'Ciudad' -> x:[0,1000) y:[0,1000) | 10000 sensores
+RESULTADO_FIJO,1,1,10000,20,0.783269,200000,255339.99
